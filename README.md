@@ -2,4 +2,4 @@
 Contains couple of random utilities.
 
 The suite contains a readme function 
-(You can activate by pressing "e" & "enter" after you have executed the batch file.
+(You can activate by pressing "r" & "enter" after you have executed the batch file.
