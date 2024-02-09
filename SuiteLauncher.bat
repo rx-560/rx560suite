@@ -1,14 +1,19 @@
 @echo off
+if not defined in_subprocess (cmd /k set in_subprocess=y ^& %0 %*) & exit )
 rem ↓ (SuiteLauncher Code)
 :start
 cls
-title rx560 Suite Launcher v1.1
+title rx560 Suite Launcher v1.3
 echo Welcome to rx560 Suite
 echo Choose a program to run
-echo [f]ilereader
+echo fi[l]ereader
 echo [i]odc
 echo [m]akefile
 echo [d]ownloader
+echo [f]ilecopy
+echo [t]askkill
+echo [u]pdater
+echo [c]leaner
 echo ----
 echo [r]eadme
 echo [e]xit
@@ -17,7 +22,7 @@ goto parseAnswer
 
 
 :parseAnswer
-if %wantedProgramStart%==f (
+if %wantedProgramStart%==l (
    goto fileReaderStart
    )
 if %wantedProgramStart%==i (
@@ -29,12 +34,28 @@ if %wantedProgramStart%==m (
 if %wantedProgramStart%==d (
    goto filedownloader
    )
+if %wantedProgramStart%==f (
+   goto filecopy
+   )
 if %wantedProgramStart%==r (
    goto readme
    )
 if %wantedProgramStart%==e (
    goto exitScript
    )
+if %wantedProgramStart%==t (
+   goto taskkill
+   )
+if %wantedProgramStart%==u (
+   goto fileUpdater
+   )
+if %wantedProgramStart%==c (
+   goto cleaner
+   )
+cls
+echo Make sure to select one of the available functions!
+pause
+goto start
 rem ↑ (SuiteLauncher Code)
 
 
@@ -52,6 +73,7 @@ goto reading
 
 
 :reading
+cls
 rem FOR /F %%i IN (%input1%\%input2%) DO echo %%i>%pathout%\outputReadFile.txt
 type %input1%\%input2%
 rem start %pathout%\outputReadFile.txt
@@ -129,22 +151,131 @@ bitsadmin /transfer myDownloadJob /download /priority foreground %wantedDownload
 pause
 goto start
 
+:fileUpdater
+cls
+echo Do you want to only update [i]nstalled apps, install [w]indows Updates or [b]oth?
+set /p wantedUpdates="> "
+if %wantedUpdates%==i (
+   cls
+   title Updating apps...
+   winget update --all --silent --recurse --force
+   pause
+   goto start
+   )
+if %wantedUpdates%==w (
+   cls
+   title Updating Windows.
+   powershell wuauclt /detectnow /updatenow
+   powershell UsoClient /StartScan
+   echo Started Windows update scan.
+   title Updating Windows..
+   PING localhost -n 2 >NUL
+   title Updating Windows...
+   UsoClient /StartDownload
+   echo Started Windows update download.
+   PING localhost -n 3 >NUL
+   UsoClient /StartInstall
+   echo Started Windows update install.
+   PING localhost -n 4 >NUL
+   echo Finished installing Windows updates [Updates might still be installing!]
+   pause
+   goto start
+   )
+if %wantedUpdates%==b (
+   cls
+   title Updating apps...
+   winget update --all --silent --recurse --force
+   title Updating Windows.
+   powershell wuauclt /detectnow /updatenow
+   powershell UsoClient /StartScan
+   echo Started Windows update scan.
+   title Updating Windows..
+   PING localhost -n 2 >NUL
+   title Updating Windows...
+   UsoClient /StartDownload
+   echo Started Windows update download.
+   PING localhost -n 3 >NUL
+   UsoClient /StartInstall
+   echo Started Windows update install.
+   PING localhost -n 4 >NUL
+   echo Finished installing Windows updates (Updates might still be installing!)
+   pause
+   goto start
+   )
+
+:filecopy
+cls
+echo Enter a file path to the source
+set /p wantedCopySrc="> "
+echo ----------------------
+echo Enter a file path to the destination (TO A EXISTING FOLDER!)
+set /p wantedCopyDest="> "
+xcopy /e /v %wantedCopySrc% %wantedCopyDest%
+goto start
+
+:taskkill 
+cls
+tasklist
+echo --------------
+echo Which task do you want to end
+set /p taskKill="> "
+echo Type "/T" if you want to kill the the process and any processes created by it. Leave empty if you don't.
+set /p wantKillChilds="> "
+if %taskkill%==svchost.exe goto taskKillError
+taskkill /f /im %wantKillChilds% %taskKill%
+pause
+goto start
+
+:taskKillError
+echo Are you sure you want to end this task? It will bluescreen your computer (if you ran this program as adminstrator.)
+choice /C YN 
+if %errorlevel%==1 taskkill /f /im %taskKill%
+if %errorlevel%==2 goto taskKillError2
+pause
+goto start
+
+:taskKillError2
+echo Okay, you can change your mind :)
+timeout 1 >nul
+goto taskkill
+
+:cleaner
+Cls
+echo If you didn't start SuiteLauncher as Adminstrator, this might not work properly.
+title Counting Temporary Files
+pushd %temp%
+for /f %%A in ('dir /a-d-s-h /b ^| find /v /c ""') do set cnt=%%A
+echo Amount of temporary files in %temp%: %cnt%
+echo ------------------------------------------
+pause
+title Cleaning.
+echo Cleaning right now!
+echo Errors:
+echo ----------------------------
+rmdir /S /Q %temp%
+echo ----------------------------
+title Cleaning..
+mkdir %username%\AppData\Local\Temp
+title Cleaning..
+echo Done cleaning!
+title Cleaning done!
+pause
+popd
+goto start
+
 :readme
 cls
 title Suite Launcher ReadMe
-(
 echo Thank you for using rx560 Suite!
 echo This launcher is in no way malware.
 echo I am not responsible for what people decide to do with this.
 echo -rx560
 echo -------------
 echo Changelogs:
+echo v1.3: Added installed app + Windows updater
+echo v1.2: Added /T to Taskkill
 echo v1.1: Added readme + file downloader
-echo v1.0: Initial release
-)>"%dp0%readme.txt"
-start readme.txt
-timeout /t 1 >nul
-del readme.txt
+echo v1.0: Initial release (Before github)
 pause
 goto start
 
@@ -162,3 +293,6 @@ goto start
 
 :exitScript
 exit
+
+:end
+cmd /k
